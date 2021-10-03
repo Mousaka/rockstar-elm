@@ -220,7 +220,6 @@ suite =
                 \name ->
                     name
                         ++ " is lies"
-                        |> Debug.log "Proper name is: "
                         |> parse
                         |> Expect.equal (Ok (Variable (String.toLower name) F))
             ]
