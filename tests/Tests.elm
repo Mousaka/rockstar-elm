@@ -114,11 +114,6 @@ alph lower n =
         normalized
 
 
-atilla : List (List Int) -> List (List Int)
-atilla =
-    identity
-
-
 properVariableNameFuzzer : Fuzzer String
 properVariableNameFuzzer =
     Fuzz.custom
