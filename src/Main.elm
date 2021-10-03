@@ -51,6 +51,7 @@ type Value
 type Val
     = T
     | F
+    | Number Float
 
 
 type Term
@@ -101,6 +102,7 @@ valParser =
     oneOf
         [ true
         , false
+        , number
         ]
 
 
@@ -191,6 +193,17 @@ false =
             ]
 
 
+number : Parser Val
+number =
+    succeed Number
+        |= oneOf
+            [ succeed negate
+                |. symbol "-"
+                |= float
+            , float
+            ]
+
+
 simpleVariable =
     simpleVariableHelper |> Parser.map (\( name, value ) -> Variable name value)
 
@@ -200,7 +213,7 @@ termP =
     succeed identity
         |. spaces
         |= oneOf
-            [ valParser |> Parser.map Val
+            [ backtrackable (valParser |> Parser.map Val)
             , commonVariable
             , backtrackable simpleVariable
             , properVariable

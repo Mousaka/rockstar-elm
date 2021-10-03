@@ -4,6 +4,8 @@ import Expect
 import Fuzz exposing (Fuzzer, constant)
 import Main exposing (Term(..), Val(..), Value(..), parse, simpleVariable)
 import Parser as Praser
+import Random
+import Shrink
 import Test exposing (Test, describe, fuzz, test)
 
 
@@ -53,6 +55,118 @@ commonVariableFuzzer =
         )
 
 
+alphaFuzzer : Fuzzer Char
+alphaFuzzer =
+    let
+        mapper : Char -> Bool -> Char
+        mapper char upper =
+            if upper then
+                Char.toUpper char
+
+            else
+                char
+    in
+    Fuzz.map2 mapper
+        (Fuzz.oneOf
+            [ Fuzz.constant 'a'
+            , Fuzz.constant 'b'
+            , Fuzz.constant 'c'
+            , Fuzz.constant 'd'
+            , Fuzz.constant 'e'
+            , Fuzz.constant 'f'
+            , Fuzz.constant 'g'
+            , Fuzz.constant 'h'
+            , Fuzz.constant 'i'
+            , Fuzz.constant 'j'
+            , Fuzz.constant 'k'
+            , Fuzz.constant 'l'
+            , Fuzz.constant 'm'
+            , Fuzz.constant 'n'
+            , Fuzz.constant 'o'
+            , Fuzz.constant 'p'
+            , Fuzz.constant 'q'
+            , Fuzz.constant 'r'
+            , Fuzz.constant 's'
+            , Fuzz.constant 't'
+            , Fuzz.constant 'u'
+            , Fuzz.constant 'v'
+            , Fuzz.constant 'w'
+            , Fuzz.constant 'x'
+            , Fuzz.constant 'y'
+            , Fuzz.constant 'z'
+            ]
+        )
+        Fuzz.bool
+
+
+alph : Bool -> Int -> Char
+alph lower n =
+    let
+        normalized =
+            remainderBy 26 n
+                + 65
+                |> Char.fromCode
+    in
+    if lower then
+        Char.toLower normalized
+
+    else
+        normalized
+
+
+atilla : List (List Int) -> List (List Int)
+atilla =
+    identity
+
+
+properVariableNameFuzzer : Fuzzer String
+properVariableNameFuzzer =
+    Fuzz.custom
+        (Random.int 1 10
+            |> Random.andThen
+                (\nOfWords ->
+                    -- 5 words
+                    Random.list nOfWords
+                        (Random.int 1 20
+                            |> Random.andThen
+                                (\wordLen -> Random.list wordLen (Random.int 0 25))
+                        )
+                )
+            |> Random.map atilla
+            |> Random.map
+                (\wordsAsChars ->
+                    wordsAsChars
+                        |> List.foldl
+                            (\chars acc ->
+                                let
+                                    stuff =
+                                        chars
+                                            |> List.indexedMap
+                                                (\index charCode ->
+                                                    if index == 0 then
+                                                        alph False charCode
+
+                                                    else
+                                                        alph True charCode
+                                                )
+                                            |> String.fromList
+                                in
+                                if acc == "" then
+                                    stuff
+
+                                else
+                                    String.join " " [ acc, stuff ]
+                            )
+                            ""
+                )
+        )
+        Shrink.noShrink
+
+
+
+-- Shrink.map Position (Shrink.int x) |> Shrink.andMap (Shrink.int y))
+
+
 suite : Test
 suite =
     describe "Parser"
@@ -67,6 +181,14 @@ suite =
                     faleString
                         |> parse
                         |> Expect.equal (Ok (Val F))
+            ]
+        , describe "number values"
+            [ fuzz Fuzz.float "Parse number values" <|
+                \number ->
+                    number
+                        |> String.fromFloat
+                        |> parse
+                        |> Expect.equal (Ok (Val (Number number)))
             ]
         , describe "Variables"
             [ test "Simple variable func" <|
@@ -91,8 +213,15 @@ suite =
                         |> Expect.equal (Ok (Variable "floor jansen" T))
             , test "Proper Three word variable" <|
                 \_ ->
-                    "Jonathan III Rowlins is right"
+                    "Jonathan III Rowlins is 1.1"
                         |> parse
-                        |> Expect.equal (Ok (Variable "jonathan iii rowlins" T))
+                        |> Expect.equal (Ok (Variable "jonathan iii rowlins" (Number 1.1)))
+            , fuzz properVariableNameFuzzer "Proper variables" <|
+                \name ->
+                    name
+                        ++ " is lies"
+                        |> Debug.log "Proper name is: "
+                        |> parse
+                        |> Expect.equal (Ok (Variable (String.toLower name) F))
             ]
         ]
