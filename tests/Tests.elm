@@ -160,7 +160,37 @@ properVariableNameFuzzer =
                             ""
                 )
         )
-        Shrink.noShrink
+        (Shrink.keepIf
+            (\str ->
+                let
+                    trimmed =
+                        str |> String.trim
+                in
+                (trimmed |> String.length)
+                    > 0
+                    && not (String.startsWith " " str)
+                    && not (String.endsWith " " str)
+                    && str
+                    /= "a"
+                    && str
+                    /= "A"
+            )
+            (Shrink.convert String.fromList
+                String.toList
+                (Shrink.list
+                    (Shrink.character
+                        |> Shrink.keepIf
+                            (\c ->
+                                let
+                                    code =
+                                        Char.toCode c
+                                in
+                                (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
+                            )
+                    )
+                )
+            )
+        )
 
 
 
