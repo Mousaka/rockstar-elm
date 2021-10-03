@@ -127,7 +127,6 @@ properVariableNameFuzzer =
                                 (\wordLen -> Random.list wordLen (Random.int 0 25))
                         )
                 )
-            |> Random.map atilla
             |> Random.map
                 (\wordsAsChars ->
                     wordsAsChars
